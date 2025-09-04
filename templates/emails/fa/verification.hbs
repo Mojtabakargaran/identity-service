@@ -1,16 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify Your Email Address - {{hospitalName}}</title>
+    <title>{{subject}}</title>
     <style>
         body { 
-            font-family: Arial, Helvetica, sans-serif; 
-            line-height: 1.5; 
+            font-family: 'Tahoma', 'Arial Unicode MS', Arial, sans-serif; 
+            line-height: 1.6; 
             margin: 0; 
             padding: 0; 
             background-color: #f9fafb; 
+            direction: rtl;
+            text-align: right;
         }
         .container { 
             max-width: 600px; 
@@ -49,9 +51,18 @@
         }
         .warning { 
             background-color: #fef2f2; 
-            border-left: 4px solid #ef4444; 
+            border-right: 4px solid #ef4444; 
             padding: 16px; 
             margin: 20px 0; 
+        }
+        .text-center {
+            text-align: center;
+        }
+        .link-text {
+            word-break: break-all; 
+            color: #2563eb;
+            direction: ltr;
+            text-align: left;
         }
     </style>
 </head>
@@ -59,37 +70,37 @@
     <div class="container">
         <div class="header">
             <h1>{{hospitalName}}</h1>
-            <p>Hospital Management Platform</p>
+            <p>پلتفرم مدیریت بیمارستان</p>
         </div>
         
         <div class="content">
-            <h2>Welcome {{fullName}}!</h2>
+            <h2>{{welcome}} {{fullName}}!</h2>
             
-            <p>Thank you for registering with {{hospitalName}}. To complete your registration and secure your account, please verify your email address by clicking the button below:</p>
+            <p>{{thankYou}} {{hospitalName}} متشکریم. {{verifyMessage}}</p>
             
-            <div style="text-align: center;">
-                <a href="{{verificationLink}}" class="button">Verify Email Address</a>
+            <div class="text-center">
+                <a href="{{verificationLink}}" class="button">{{verifyButton}}</a>
             </div>
             
-            <p>If the button above doesn't work, copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; color: #2563eb;">{{verificationLink}}</p>
+            <p>{{linkMessage}}</p>
+            <p class="link-text">{{verificationLink}}</p>
             
             <div class="warning">
-                <strong>Important:</strong> This verification link will expire in 24 hours for your security. If you didn't request this registration, please ignore this email.
+                <strong>{{warningTitle}}</strong> {{warningMessage}}
             </div>
             
-            <p>Once verified, you'll have full access to your hospital management platform.</p>
+            <p>{{accessMessage}}</p>
             
-            <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
+            <p>{{supportMessage}}</p>
             
-            <p>Best regards,<br>
-            {{hospitalName}} Support Team</p>
+            <p>{{regards}}<br>
+            {{hospitalName}} {{supportTeam}}</p>
         </div>
         
         <div class="footer">
-            <p>This email was sent to verify your account registration.</p>
-            <p>If you have questions, contact us at {{supportEmail}}</p>
-            <p>© 2025 {{hospitalName}}. All rights reserved.</p>
+            <p>{{footerLine1}}</p>
+            <p>{{footerLine2}} {{supportEmail}}</p>
+            <p>© ۱۴۰۴ {{hospitalName}}. {{footerLine3}}</p>
         </div>
     </div>
 </body>

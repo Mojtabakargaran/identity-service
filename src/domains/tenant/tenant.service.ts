@@ -67,6 +67,7 @@ export class TenantService {
         hospitalAddressPostalCode: registerDto.hospitalAddressPostalCode,
         hospitalContactPhone: registerDto.hospitalContactPhone,
         hospitalContactEmail: registerDto.hospitalContactEmail,
+        preferredLanguage: registerDto.preferredLanguage,
       });
 
       const savedTenant = await this.tenantRepository.save(tenant);
@@ -98,7 +99,7 @@ export class TenantService {
 
       // Send verification email
       try {
-        await this.emailService.sendVerificationEmail(savedUser.email, savedUser.fullName, tenantId);
+        await this.emailService.sendVerificationEmail(savedUser.email, savedUser.fullName, tenantId, savedTenant.preferredLanguage);
       } catch (emailError) {
         console.warn('Email verification sending failed:', emailError);
       }
@@ -152,6 +153,7 @@ export class TenantService {
         ownerId: owner.userId,
         ownerEmail: owner.email,
         hospitalLicenseNumber: tenant.hospitalLicenseNumber,
+        preferredLanguage: tenant.preferredLanguage,
         createdAt: tenant.createdAt.toISOString(),
       },
     };

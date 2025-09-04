@@ -1,5 +1,6 @@
-import { IsString, IsEmail, IsNotEmpty, MinLength, Matches, MaxLength } from 'class-validator';
+import { IsString, IsEmail, IsNotEmpty, MinLength, Matches, MaxLength, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Language } from '../../../shared/enums/language.enum';
 
 export class RegisterTenantDto {
   @ApiProperty({ description: 'Full name of the hospital owner' })
@@ -75,4 +76,13 @@ export class RegisterTenantDto {
   @IsEmail()
   @IsNotEmpty()
   hospitalContactEmail: string;
+
+  @ApiProperty({ 
+    description: 'Preferred language for communications',
+    enum: Language,
+    default: Language.ENGLISH
+  })
+  @IsEnum(Language, { message: 'Preferred language must be either en (English) or fa (Farsi)' })
+  @IsNotEmpty()
+  preferredLanguage: Language;
 }

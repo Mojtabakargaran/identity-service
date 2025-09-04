@@ -1,5 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { User } from '../user/user.entity';
+import { Language } from '../../shared/enums/language.enum';
 
 @Entity('tenants')
 export class Tenant {
@@ -32,6 +33,14 @@ export class Tenant {
 
   @Column({ name: 'hospital_contact_email', type: 'varchar', length: 255 })
   hospitalContactEmail: string;
+
+  @Column({ 
+    name: 'preferred_language', 
+    type: 'enum', 
+    enum: Language, 
+    default: Language.ENGLISH 
+  })
+  preferredLanguage: Language;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
