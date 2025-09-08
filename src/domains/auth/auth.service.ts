@@ -56,7 +56,7 @@ export class AuthService {
     }
 
     try {
-      await this.emailService.sendVerificationEmail(user.email, user.fullName, user.tenantId, user.tenant.preferredLanguage);
+      await this.emailService.sendVerificationEmail(user.email, user.fullName, user.tenantId, user.userId, user.tenant.preferredLanguage);
       
       return new ApiResponseDto('VERIFICATION_SENT', 'Verification email sent successfully');
     } catch (error) {

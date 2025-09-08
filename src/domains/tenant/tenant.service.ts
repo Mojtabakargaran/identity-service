@@ -99,7 +99,7 @@ export class TenantService {
 
       // Send verification email
       try {
-        await this.emailService.sendVerificationEmail(savedUser.email, savedUser.fullName, tenantId, savedTenant.preferredLanguage);
+        await this.emailService.sendVerificationEmail(savedUser.email, savedUser.fullName, tenantId, savedUser.userId, savedTenant.preferredLanguage);
       } catch (emailError) {
         console.warn('Email verification sending failed:', emailError);
       }

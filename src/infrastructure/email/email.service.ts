@@ -27,7 +27,7 @@ export class EmailService {
     });
   }
 
-  async sendVerificationEmail(email: string, fullName: string, tenantId: string, preferredLanguage: Language = Language.ENGLISH): Promise<void> {
+  async sendVerificationEmail(email: string, fullName: string, tenantId: string, userId: string, preferredLanguage: Language = Language.ENGLISH): Promise<void> {
     const verificationToken = uuidv4();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
     const frontendUrl = this.configService.get('app.frontendUrl');
@@ -54,7 +54,7 @@ export class EmailService {
       await this.transporter.sendMail(mailOptions);
       
       // Publish email sent event
-      await this.publishEmailSentEvent(email, tenantId, verificationToken, expiresAt, preferredLanguage);
+      await this.publishEmailSentEvent(email, tenantId, userId, verificationToken, expiresAt, preferredLanguage);
     } catch (error) {
       console.error('Failed to send verification email:', error);
       throw error;
@@ -111,14 +111,14 @@ export class EmailService {
     return content[language] || content[Language.ENGLISH];
   }
 
-  private async publishEmailSentEvent(email: string, tenantId: string, verificationToken: string, expiresAt: Date, language: Language = Language.ENGLISH): Promise<void> {
+  private async publishEmailSentEvent(email: string, tenantId: string, userId: string, verificationToken: string, expiresAt: Date, language: Language = Language.ENGLISH): Promise<void> {
     const event = {
       eventId: uuidv4(),
       eventType: 'verification.email.sent',
       timestamp: new Date().toISOString(),
       version: '1.0',
       data: {
-        userId: null, // Will be populated when user is available
+        userId: userId,
         tenantId,
         email,
         verificationToken,
