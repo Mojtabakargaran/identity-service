@@ -1,11 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, IsNull } from 'typeorm';
 import * as nodemailer from 'nodemailer';
 import * as handlebars from 'handlebars';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { MessagingService } from '../messaging/messaging.service';
+import { EmailVerificationToken } from '../../domains/auth/email-verification-token.entity';
 import { Language } from '../../shared/enums/language.enum';
 
 @Injectable()
@@ -15,6 +18,8 @@ export class EmailService {
   constructor(
     private configService: ConfigService,
     private messagingService: MessagingService,
+    @InjectRepository(EmailVerificationToken)
+    private emailVerificationTokenRepository: Repository<EmailVerificationToken>,
   ) {
     this.transporter = nodemailer.createTransport({
       host: this.configService.get('email.host'),
@@ -30,8 +35,22 @@ export class EmailService {
   async sendVerificationEmail(email: string, fullName: string, tenantId: string, userId: string, preferredLanguage: Language = Language.ENGLISH): Promise<void> {
     const verificationToken = uuidv4();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-    const frontendUrl = this.configService.get('app.frontendUrl');
-    const verificationLink = `${frontendUrl}/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
+    const frontendUrl = this.configService.get('app.frontendUrl') || 'http://localhost:3100';
+    const verificationLink = `${frontendUrl}/verify-email?token=${verificationToken}&lang=${preferredLanguage}`;
+
+    // Invalidate previous tokens for this user
+    await this.emailVerificationTokenRepository.update(
+      { userId, usedAt: IsNull() },
+      { usedAt: new Date() }
+    );
+
+    // Create new verification token
+    const tokenRecord = this.emailVerificationTokenRepository.create({
+      userId,
+      tokenValue: verificationToken,
+      expiresAt,
+    });
+    await this.emailVerificationTokenRepository.save(tokenRecord);
 
     const template = this.getEmailTemplate('verification', preferredLanguage);
     const emailContent = this.getEmailContent(preferredLanguage);
