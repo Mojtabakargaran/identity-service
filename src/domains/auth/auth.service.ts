@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException, GoneException, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, GoneException, HttpException, HttpStatus, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserStatus } from '../user/user.entity';
@@ -8,8 +8,12 @@ import { MessagingService } from '../../infrastructure/messaging/messaging.servi
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { EmailVerificationResponseDto } from './dto/email-verification-response.dto';
+import { LoginDto } from './dto/login.dto';
+import { LoginResponseDataDto } from './dto/login-response.dto';
 import { ApiResponseDto } from '../../shared/dto/api-response.dto';
+import { Language } from '../../shared/enums/language.enum';
 import { v4 as uuidv4 } from 'uuid';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
@@ -199,6 +203,208 @@ export class AuthService {
         verificationToken,
         failureReason,
         ipAddress: '127.0.0.1', // TODO: Get actual IP from request
+      },
+    };
+
+    await this.messagingService.publishEvent('user-events', event);
+  }
+
+  async login(loginDto: LoginDto, ipAddress: string, userAgent: string): Promise<ApiResponseDto<LoginResponseDataDto>> {
+    // Validate input
+    if (!loginDto.email || !loginDto.password) {
+      throw new BadRequestException({
+        code: 'MISSING_REQUIRED_FIELDS',
+        message: 'Please complete all required fields',
+      });
+    }
+
+    // Get user with tenant relation
+    const user = await this.userRepository.findOne({
+      where: { email: loginDto.email },
+      relations: ['tenant'],
+    });
+
+    // Check if account exists (generic error for security)
+    if (!user) {
+      await this.logFailedLogin(loginDto.email, 'ACCOUNT_NOT_FOUND', ipAddress, userAgent);
+      throw new UnauthorizedException({
+        code: 'INVALID_CREDENTIALS',
+        message: 'Invalid email or password',
+      });
+    }
+
+    // Check account lockout
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      await this.logFailedLogin(user.userId, 'ACCOUNT_LOCKED', ipAddress, userAgent);
+      throw new ForbiddenException({
+        code: 'ACCOUNT_LOCKED',
+        message: 'Account is temporarily locked. Please try again later or reset your password',
+      });
+    }
+
+    // Check account status
+    if (user.status !== UserStatus.ACTIVE) {
+      await this.logFailedLogin(user.userId, 'ACCOUNT_INACTIVE', ipAddress, userAgent);
+      throw new UnauthorizedException({
+        code: 'ACCOUNT_NOT_VERIFIED',
+        message: 'Account is not active. Please verify your email address',
+      });
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(loginDto.password, user.passwordHash);
+    if (!isPasswordValid) {
+      await this.handleFailedLogin(user, ipAddress, userAgent);
+      throw new UnauthorizedException({
+        code: 'INVALID_CREDENTIALS',
+        message: 'Invalid email or password',
+      });
+    }
+
+    // Reset failed login attempts on successful login
+    if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+      await this.resetFailedLogins(user);
+    }
+
+    // Create session
+    const sessionData = this.createSession();
+    
+    // Determine language (user preference or tenant default)
+    const language = loginDto.preferredLanguage || user.tenant.preferredLanguage;
+
+    // Build response
+    const responseData: LoginResponseDataDto = {
+      user: {
+        userId: user.userId,
+        fullName: user.fullName,
+        email: user.email,
+        tenantId: user.tenantId,
+        status: user.status,
+      },
+      tenant: {
+        tenantId: user.tenant.tenantId,
+        hospitalName: user.tenant.hospitalName,
+        subdomain: user.tenant.subdomain,
+        preferredLanguage: user.tenant.preferredLanguage,
+      },
+      session: sessionData,
+    };
+
+    // Publish successful login event
+    await this.publishLoginSuccessEvent(user, language, ipAddress, userAgent);
+
+    return new ApiResponseDto('LOGIN_SUCCESS', 'Login successful', responseData);
+  }
+
+  private async handleFailedLogin(user: User, ipAddress: string, userAgent: string): Promise<void> {
+    user.failedLoginAttempts += 1;
+    user.lastFailedLoginAt = new Date();
+
+    // Lock account after 5 failed attempts (30 minutes)
+    if (user.failedLoginAttempts >= 5) {
+      user.lockedUntil = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+      await this.userRepository.save(user);
+      await this.publishAccountLockedEvent(user, ipAddress, userAgent);
+    } else {
+      await this.userRepository.save(user);
+    }
+
+    await this.logFailedLogin(user.userId, 'INVALID_PASSWORD', ipAddress, userAgent);
+  }
+
+  private async resetFailedLogins(user: User): Promise<void> {
+    const wasLocked = !!user.lockedUntil;
+    user.failedLoginAttempts = 0;
+    user.lockedUntil = null;
+    user.lastFailedLoginAt = null;
+    await this.userRepository.save(user);
+
+    if (wasLocked) {
+      await this.publishAccountUnlockedEvent(user);
+    }
+  }
+
+  private createSession(): { sessionId: string; expiresAt: string; csrfToken: string } {
+    const sessionId = uuidv4();
+    const csrfToken = uuidv4();
+    const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000); // 8 hours
+
+    return {
+      sessionId,
+      expiresAt: expiresAt.toISOString(),
+      csrfToken,
+    };
+  }
+
+  private async logFailedLogin(userIdOrEmail: string, reason: string, ipAddress: string, userAgent: string): Promise<void> {
+    const event = {
+      eventId: uuidv4(),
+      eventType: 'user.login.failed',
+      timestamp: new Date().toISOString(),
+      version: '1.0',
+      data: {
+        userIdOrEmail,
+        failureReason: reason,
+        ipAddress,
+        userAgent,
+      },
+    };
+
+    await this.messagingService.publishEvent('user-events', event);
+  }
+
+  private async publishLoginSuccessEvent(user: User, language: Language, ipAddress: string, userAgent: string): Promise<void> {
+    const event = {
+      eventId: uuidv4(),
+      eventType: 'user.login.success',
+      timestamp: new Date().toISOString(),
+      version: '1.0',
+      data: {
+        userId: user.userId,
+        tenantId: user.tenantId,
+        email: user.email,
+        fullName: user.fullName,
+        preferredLanguage: language,
+        ipAddress,
+        userAgent,
+        loginTimestamp: new Date().toISOString(),
+      },
+    };
+
+    await this.messagingService.publishEvent('user-events', event);
+  }
+
+  private async publishAccountLockedEvent(user: User, ipAddress: string, userAgent: string): Promise<void> {
+    const event = {
+      eventId: uuidv4(),
+      eventType: 'user.account.locked',
+      timestamp: new Date().toISOString(),
+      version: '1.0',
+      data: {
+        userId: user.userId,
+        tenantId: user.tenantId,
+        email: user.email,
+        lockoutReason: 'FAILED_LOGIN_ATTEMPTS',
+        lockedUntil: user.lockedUntil?.toISOString(),
+        ipAddress,
+        userAgent,
+      },
+    };
+
+    await this.messagingService.publishEvent('user-events', event);
+  }
+
+  private async publishAccountUnlockedEvent(user: User): Promise<void> {
+    const event = {
+      eventId: uuidv4(),
+      eventType: 'user.account.unlocked',
+      timestamp: new Date().toISOString(),
+      version: '1.0',
+      data: {
+        userId: user.userId,
+        tenantId: user.tenantId,
+        email: user.email,
+        unlockReason: 'SUCCESSFUL_LOGIN',
       },
     };
 

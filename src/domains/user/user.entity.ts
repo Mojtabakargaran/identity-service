@@ -39,6 +39,15 @@ export class User {
   })
   status: UserStatus;
 
+  @Column({ name: 'failed_login_attempts', type: 'integer', default: 0 })
+  failedLoginAttempts: number;
+
+  @Column({ name: 'locked_until', type: 'timestamp', nullable: true })
+  lockedUntil: Date | null;
+
+  @Column({ name: 'last_failed_login_at', type: 'timestamp', nullable: true })
+  lastFailedLoginAt: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
