@@ -3,11 +3,16 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
+import { PasswordResetService } from './password-reset.service';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { LoginDto } from './dto/login.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ValidateResetTokenDto } from './dto/validate-reset-token.dto';
 import { EmailVerificationResponseDto } from './dto/email-verification-response.dto';
 import { LoginResponseDataDto } from './dto/login-response.dto';
+import { ForgotPasswordResponseDto, ValidateResetTokenResponseDto, ResetPasswordResponseDto } from './dto/password-reset-response.dto';
 import { ApiResponseDto } from '../../shared/dto/api-response.dto';
 
 @ApiTags('Authentication')
@@ -15,6 +20,7 @@ import { ApiResponseDto } from '../../shared/dto/api-response.dto';
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
+    private readonly passwordResetService: PasswordResetService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -106,5 +112,98 @@ export class AuthController {
     const userAgent = req.headers['user-agent'] || 'Unknown';
     
     return this.authService.login(loginDto, ipAddress, userAgent);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request password reset' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Password reset instructions sent',
+    type: ApiResponseDto
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Invalid email format or missing required fields' 
+  })
+  @ApiResponse({ 
+    status: 429, 
+    description: 'Rate limit exceeded' 
+  })
+  @ApiResponse({ 
+    status: 500, 
+    description: 'Email delivery failed or database error' 
+  })
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto, @Req() req: Request): Promise<ApiResponseDto> {
+    const ipAddress = req.ip || req.connection.remoteAddress || '127.0.0.1';
+    const userAgent = req.headers['user-agent'] || 'Unknown';
+    
+    return this.passwordResetService.requestPasswordReset(forgotPasswordDto, ipAddress, userAgent);
+  }
+
+  @Get('reset-password')
+  @ApiOperation({ summary: 'Validate password reset token' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Reset token is valid',
+    type: ApiResponseDto
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Invalid token or missing token' 
+  })
+  @ApiResponse({ 
+    status: 404, 
+    description: 'Token not found' 
+  })
+  @ApiResponse({ 
+    status: 410, 
+    description: 'Token expired or already used' 
+  })
+  @ApiResponse({ 
+    status: 423, 
+    description: 'Account locked' 
+  })
+  @ApiResponse({ 
+    status: 500, 
+    description: 'Token validation failed due to system error' 
+  })
+  async validateResetToken(@Query() validateDto: ValidateResetTokenDto): Promise<ApiResponseDto> {
+    return this.passwordResetService.validateResetToken(validateDto);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Submit new password to complete reset' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Password reset successfully',
+    type: ApiResponseDto
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Invalid token, password mismatch, or weak password' 
+  })
+  @ApiResponse({ 
+    status: 404, 
+    description: 'Token not found' 
+  })
+  @ApiResponse({ 
+    status: 410, 
+    description: 'Token expired or already used' 
+  })
+  @ApiResponse({ 
+    status: 423, 
+    description: 'Account locked' 
+  })
+  @ApiResponse({ 
+    status: 500, 
+    description: 'Password update failed due to system error' 
+  })
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto, @Req() req: Request): Promise<ApiResponseDto> {
+    const ipAddress = req.ip || req.connection.remoteAddress || '127.0.0.1';
+    const userAgent = req.headers['user-agent'] || 'Unknown';
+    
+    return this.passwordResetService.resetPassword(resetPasswordDto, ipAddress, userAgent);
   }
 }

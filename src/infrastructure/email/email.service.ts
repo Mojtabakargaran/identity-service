@@ -130,6 +130,67 @@ export class EmailService {
     return content[language] || content[Language.ENGLISH];
   }
 
+  async sendPasswordResetEmail(email: string, fullName: string, resetToken: string, preferredLanguage: Language = Language.ENGLISH): Promise<void> {
+    const frontendUrl = this.configService.get('app.frontendUrl') || 'http://localhost:3100';
+    const resetLink = `${frontendUrl}/reset-password?token=${resetToken}&lang=${preferredLanguage}`;
+    
+    const templatePath = join(__dirname, '..', '..', '..', 'templates', 'emails', preferredLanguage, 'password-reset.hbs');
+    const templateContent = readFileSync(templatePath, 'utf8');
+    const template = handlebars.compile(templateContent);
+    
+    const content = this.getPasswordResetEmailContent(preferredLanguage);
+    const html = template({
+      ...content,
+      fullName,
+      resetLink,
+      frontendUrl,
+    });
+
+    await this.transporter.sendMail({
+      from: this.configService.get('email.from'),
+      to: email,
+      subject: content.subject,
+      html,
+    });
+  }
+
+  private getPasswordResetEmailContent(language: Language) {
+    const content = {
+      [Language.ENGLISH]: {
+        subject: 'Password Reset Request - Hospital Management System',
+        greeting: 'Hello',
+        introMessage: 'We received a request to reset your password for your Hospital Management account.',
+        actionMessage: 'Click the button below to reset your password:',
+        resetButton: 'Reset Password',
+        linkValidMessage: 'This link is valid for 24 hours and can only be used once.',
+        noRequestMessage: 'If you did not request a password reset, please ignore this email. Your password will remain unchanged.',
+        securityMessage: 'For security reasons, never share this link with anyone.',
+        regards: 'Best regards,',
+        supportTeam: 'Support Team',
+        footerLine1: 'This email was sent to reset your password.',
+        footerLine2: 'If you have questions, contact us',
+        footerLine3: 'All rights reserved.',
+      },
+      [Language.FARSI]: {
+        subject: 'درخواست بازیابی رمز عبور - سیستم مدیریت بیمارستان',
+        greeting: 'سلام',
+        introMessage: 'ما درخواست بازیابی رمز عبور برای حساب کاربری شما در سیستم مدیریت بیمارستان دریافت کردیم.',
+        actionMessage: 'برای بازیابی رمز عبور خود روی دکمه زیر کلیک کنید:',
+        resetButton: 'بازیابی رمز عبور',
+        linkValidMessage: 'این لینک برای 24 ساعت معتبر است و فقط یک بار قابل استفاده است.',
+        noRequestMessage: 'اگر شما درخواست بازیابی رمز عبور نداده‌اید، لطفاً این ایمیل را نادیده بگیرید. رمز عبور شما تغییر نخواهد کرد.',
+        securityMessage: 'به دلایل امنیتی، هرگز این لینک را با کسی به اشتراک نگذارید.',
+        regards: 'با احترام،',
+        supportTeam: 'تیم پشتیبانی',
+        footerLine1: 'این ایمیل برای بازیابی رمز عبور شما ارسال شده است.',
+        footerLine2: 'اگر سوالی دارید، با ما تماس بگیرید',
+        footerLine3: 'تمامی حقوق محفوظ است.',
+      },
+    };
+
+    return content[language] || content[Language.ENGLISH];
+  }
+
   private async publishEmailSentEvent(email: string, tenantId: string, userId: string, verificationToken: string, expiresAt: Date, language: Language = Language.ENGLISH): Promise<void> {
     const event = {
       eventId: uuidv4(),

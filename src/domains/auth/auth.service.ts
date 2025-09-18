@@ -226,7 +226,14 @@ export class AuthService {
 
     // Check if account exists (generic error for security)
     if (!user) {
-      await this.logFailedLogin(loginDto.email, 'ACCOUNT_NOT_FOUND', ipAddress, userAgent);
+      await this.logFailedLogin(
+        loginDto.email,
+        null, // tenantId - null when user doesn't exist
+        null, // userId - null when user doesn't exist
+        'invalid_credentials',
+        ipAddress,
+        userAgent
+      );
       throw new UnauthorizedException({
         code: 'INVALID_CREDENTIALS',
         message: 'Invalid email or password',
@@ -235,7 +242,14 @@ export class AuthService {
 
     // Check account lockout
     if (user.lockedUntil && user.lockedUntil > new Date()) {
-      await this.logFailedLogin(user.userId, 'ACCOUNT_LOCKED', ipAddress, userAgent);
+      await this.logFailedLogin(
+        user.email,
+        user.tenantId,
+        user.userId,
+        'account_locked',
+        ipAddress,
+        userAgent
+      );
       throw new ForbiddenException({
         code: 'ACCOUNT_LOCKED',
         message: 'Account is temporarily locked. Please try again later or reset your password',
@@ -244,7 +258,14 @@ export class AuthService {
 
     // Check account status
     if (user.status !== UserStatus.ACTIVE) {
-      await this.logFailedLogin(user.userId, 'ACCOUNT_INACTIVE', ipAddress, userAgent);
+      await this.logFailedLogin(
+        user.email,
+        user.tenantId,
+        user.userId,
+        'account_not_verified',
+        ipAddress,
+        userAgent
+      );
       throw new UnauthorizedException({
         code: 'ACCOUNT_NOT_VERIFIED',
         message: 'Account is not active. Please verify your email address',
@@ -309,7 +330,14 @@ export class AuthService {
       await this.userRepository.save(user);
     }
 
-    await this.logFailedLogin(user.userId, 'INVALID_PASSWORD', ipAddress, userAgent);
+    await this.logFailedLogin(
+      user.email,
+      user.tenantId,
+      user.userId,
+      'invalid_credentials',
+      ipAddress,
+      userAgent
+    );
   }
 
   private async resetFailedLogins(user: User): Promise<void> {
@@ -336,17 +364,27 @@ export class AuthService {
     };
   }
 
-  private async logFailedLogin(userIdOrEmail: string, reason: string, ipAddress: string, userAgent: string): Promise<void> {
+  private async logFailedLogin(
+    email: string, 
+    tenantId: string | null, 
+    userId: string | null, 
+    failureReason: string, 
+    ipAddress: string, 
+    userAgent: string
+  ): Promise<void> {
     const event = {
       eventId: uuidv4(),
       eventType: 'user.login.failed',
       timestamp: new Date().toISOString(),
       version: '1.0',
       data: {
-        userIdOrEmail,
-        failureReason: reason,
+        email,
+        tenantId,
+        userId,
+        failureReason,
         ipAddress,
         userAgent,
+        attemptedAt: new Date().toISOString(),
       },
     };
 
