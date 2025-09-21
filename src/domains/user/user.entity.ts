@@ -8,6 +8,13 @@ export enum UserStatus {
   SUSPENDED = 'suspended',
 }
 
+export enum Gender {
+  MALE = 'male',
+  FEMALE = 'female',
+  OTHER = 'other',
+  PREFER_NOT_TO_SAY = 'prefer_not_to_say',
+}
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid', { name: 'user_id' })
@@ -47,6 +54,42 @@ export class User {
 
   @Column({ name: 'last_failed_login_at', type: 'timestamp', nullable: true })
   lastFailedLoginAt: Date | null;
+
+  // Profile completion fields for P1UC05
+  @Column({ name: 'date_of_birth', type: 'date', nullable: true })
+  dateOfBirth: Date | null;
+
+  @Column({
+    name: 'gender',
+    type: 'enum',
+    enum: Gender,
+    nullable: true,
+  })
+  gender: Gender | null;
+
+  @Column({ name: 'national_id_number', type: 'varchar', length: 100, nullable: true })
+  nationalIdNumber: string | null;
+
+  @Column({ name: 'nationality', type: 'varchar', length: 100, nullable: true })
+  nationality: string | null;
+
+  @Column({ name: 'professional_license_number', type: 'varchar', length: 100, nullable: true })
+  professionalLicenseNumber: string | null;
+
+  @Column({ name: 'medical_specialization', type: 'varchar', length: 100, nullable: true })
+  medicalSpecialization: string | null;
+
+  @Column({ name: 'years_of_experience', type: 'integer', nullable: true })
+  yearsOfExperience: number | null;
+
+  @Column({ name: 'educational_background', type: 'text', nullable: true })
+  educationalBackground: string | null;
+
+  @Column({ name: 'profile_photo_url', type: 'varchar', length: 500, nullable: true })
+  profilePhotoUrl: string | null;
+
+  @Column({ name: 'profile_completed_at', type: 'timestamp', nullable: true })
+  profileCompletedAt: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

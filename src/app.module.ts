@@ -8,6 +8,7 @@ import jwtConfig from './config/jwt.config';
 import emailConfig from './config/email.config';
 import { TenantModule } from './domains/tenant/tenant.module';
 import { AuthModule } from './domains/auth/auth.module';
+import { UserModule } from './domains/user/user.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -25,6 +26,7 @@ import { AppService } from './app.service';
     }]),
     TenantModule,
     AuthModule,
+    UserModule,
   ],
   controllers: [AppController],
   providers: [AppService],
