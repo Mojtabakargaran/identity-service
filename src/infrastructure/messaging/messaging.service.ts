@@ -21,6 +21,7 @@ export class MessagingService implements OnModuleInit, OnModuleDestroy {
       await this.channel.assertExchange('tenant-events', 'topic', { durable: true });
       await this.channel.assertExchange('user-events', 'topic', { durable: true });
       await this.channel.assertExchange('notification-events', 'topic', { durable: true });
+      await this.channel.assertExchange('institutional-events', 'topic', { durable: true });
 
       console.log('RabbitMQ connection established successfully');
     } catch (error) {

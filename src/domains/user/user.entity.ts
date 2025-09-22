@@ -56,7 +56,21 @@ export class User {
   lastFailedLoginAt: Date | null;
 
   // Profile completion fields for P1UC05
-  @Column({ name: 'date_of_birth', type: 'date', nullable: true })
+  @Column({ 
+    name: 'date_of_birth', 
+    type: 'date', 
+    nullable: true,
+    transformer: {
+      to: (value: Date | string | null) => {
+        if (value === null || value === undefined) return null;
+        if (typeof value === 'string') return value;
+        return value instanceof Date ? value.toISOString().split('T')[0] : value;
+      },
+      from: (value: string | null) => {
+        return value ? new Date(value + 'T00:00:00.000Z') : null;
+      }
+    }
+  })
   dateOfBirth: Date | null;
 
   @Column({

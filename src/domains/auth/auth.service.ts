@@ -293,22 +293,20 @@ export class AuthService {
     // Determine language (user preference or tenant default)
     const language = loginDto.preferredLanguage || user.tenant.preferredLanguage;
 
-    // Build response
+    // Build response according to contract specification
     const responseData: LoginResponseDataDto = {
-      user: {
-        userId: user.userId,
-        fullName: user.fullName,
-        email: user.email,
-        tenantId: user.tenantId,
-        status: user.status,
-      },
-      tenant: {
-        tenantId: user.tenant.tenantId,
+      userId: user.userId,
+      tenantId: user.tenantId,
+      email: user.email,
+      fullName: user.fullName,
+      tenantInfo: {
         hospitalName: user.tenant.hospitalName,
         subdomain: user.tenant.subdomain,
         preferredLanguage: user.tenant.preferredLanguage,
       },
-      session: sessionData,
+      sessionToken: sessionData.sessionId,
+      sessionExpiresAt: sessionData.expiresAt,
+      csrfToken: sessionData.csrfToken,
     };
 
     // Publish successful login event

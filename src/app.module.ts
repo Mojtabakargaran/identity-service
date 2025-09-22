@@ -9,6 +9,7 @@ import emailConfig from './config/email.config';
 import { TenantModule } from './domains/tenant/tenant.module';
 import { AuthModule } from './domains/auth/auth.module';
 import { UserModule } from './domains/user/user.module';
+import { InstitutionalProfileModule } from './domains/institutional-profile/institutional-profile.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -27,6 +28,7 @@ import { AppService } from './app.service';
     TenantModule,
     AuthModule,
     UserModule,
+    InstitutionalProfileModule,
   ],
   controllers: [AppController],
   providers: [AppService],
