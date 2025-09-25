@@ -10,6 +10,8 @@ import { TenantModule } from './domains/tenant/tenant.module';
 import { AuthModule } from './domains/auth/auth.module';
 import { UserModule } from './domains/user/user.module';
 import { InstitutionalProfileModule } from './domains/institutional-profile/institutional-profile.module';
+import { OperationalParametersModule } from './domains/operational-parameters/operational-parameters.module';
+import { DashboardModule } from './domains/dashboard/dashboard.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -29,6 +31,8 @@ import { AppService } from './app.service';
     AuthModule,
     UserModule,
     InstitutionalProfileModule,
+    OperationalParametersModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

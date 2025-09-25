@@ -357,6 +357,14 @@ export class CreateInstitutionalProfileTables1738041600000 implements MigrationI
       FOREIGN KEY ("tenant_id") REFERENCES "tenants"("tenant_id") ON DELETE CASCADE
     `);
 
+    // Add the foreign key constraint for hospital_staff_ratios to medical_departments
+    // (This table was created in an earlier migration without this FK)
+    await queryRunner.query(`
+      ALTER TABLE "hospital_staff_ratios" 
+      ADD CONSTRAINT "FK_HOSPITAL_STAFF_RATIOS_DEPARTMENT" 
+      FOREIGN KEY ("department_id") REFERENCES "medical_departments"("department_id") ON DELETE CASCADE
+    `);
+
     // Insert default medical departments
     await queryRunner.query(`
       INSERT INTO medical_departments (department_name_en, department_name_fa, description, is_active) VALUES
@@ -385,6 +393,7 @@ export class CreateInstitutionalProfileTables1738041600000 implements MigrationI
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Drop foreign key constraints first
+    await queryRunner.query(`ALTER TABLE "hospital_staff_ratios" DROP CONSTRAINT "FK_HOSPITAL_STAFF_RATIOS_DEPARTMENT"`);
     await queryRunner.query(`ALTER TABLE "hospital_operating_hours" DROP CONSTRAINT "FK_HOSPITAL_OPERATING_HOURS_TENANT"`);
     await queryRunner.query(`ALTER TABLE "hospital_departments" DROP CONSTRAINT "FK_HOSPITAL_DEPARTMENTS_DEPARTMENT"`);
     await queryRunner.query(`ALTER TABLE "hospital_departments" DROP CONSTRAINT "FK_HOSPITAL_DEPARTMENTS_TENANT"`);
